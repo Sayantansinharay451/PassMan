@@ -177,6 +177,8 @@ modify_additional_details() {
 	return 0
 }
 
+# modify_username() {}
+
 store_password() {
 	echo "$@"
 }
@@ -266,29 +268,52 @@ done
 
 create_profile() {
 	read -r -p "Enter name for new profile: " profile_name
-	read -r -p -s "Enter encryption key for profile: " encryption_key
+	read -r -p -s "Enter a new password for your profile: " profile_password
 
 	echo -en "\rCreating new table for profile $profile_name..."
 	# Create a new table for the profile
 	sqlite3 "$PASSMAN_DB_PATH"/"$PASSMAN_DB_NAME".db <<EOF
 	CREATE TABLE ${profile_name}_${PASSMAN_PROFILE} (
 		website TEXT PRIMARY KEY, 
-		username TEXT, 
+		user_name TEXT, 
 		password TEXT
 		title TEXT,
 		description TEXT
 	);
 EOF
+
+	profile_id=$(sqlite3 "$PASSMAN_DB_PATH"/"$PASSMAN_DB_NAME".db "select lower(hex(randomblob(2)));")
+
+	sqlite3 "$PASSMAN_DB_PATH"/"$PASSMAN_DB_NAME".db <<EOF
+	INSERT INTO ${PASSMAN_MANAGER_SCHEMA_NAME} (profile_id, profile_name) VALUES ('$profile_id', $profile_name');
+EOF
+
 	# Save the encryption key for the profile
-	echo "${encryption_key}" | openssl enc -aes-256-cbc -salt -a -pass pass:password_manager >"${profile_name}.key"
+	encryption_key=$("${profile_password}" | openssl enc -aes-256-cbc -salt -a -pass pass:"${profile_id}")
+
+	sqlite3 "$PASSMAN_DB_PATH"/"$PASSMAN_DB_NAME".db <<EOF
+	INSERT INTO ${PASSMAN_MANAGER_SCHEMA_NAME} (encryption_key) VALUES ('$encryption_key');
+EOF
 
 	sleep 2
 	echo "Profile '${profile_name}' created."
 }
 
 # checks if passman is installed or not
-sys_check() {
+system_check() {
 	echo " "
+}
+
+access_profile() {
+	echo " "
+}
+
+switch_profile() {
+	echo ""
+}
+
+see_current_profile() {
+	echo ""
 }
 
 init() {
@@ -297,11 +322,13 @@ init() {
 		# *want to give relative path
 		read -r -p "Enter the path where you want to store your database (default path is /bin/): " new_db_path
 		PASSMAN_DB_PATH=$new_db_path
+
 		# export the dp path
 		echo -en "\rCreating new database for Passman"
 		sqlite3 "$PASSMAN_DB_PATH"/"$PASSMAN_DB_NAME".db <<EOF
 			CREATE TABLE ${PASSMAN_MANAGER_SCHEMA_NAME} (
-				user_id CHAR(4) PRIMARY KEY,
+				profile_id CHAR(4) PRIMARY KEY,
+				profile_name TEXT
 				encrypt_key TEXT
 			);
 EOF

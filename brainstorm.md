@@ -14,5 +14,17 @@ Enter your title:
 Enter any description:
 ```
 
+## how it will encrypt and DB structure?
+
+#### PASSMAN_MANAGER Table
+
+userid | user_name | pass_key
+
+
+
+#### PROFILE Table
+
+
+
 
 *Feel free to add your own brainstorm overhere*
